@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Super Mario Flash</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  ruffle-player {
+    width: 100vw;
+    height: 100vh;
+    /* pixel-art rendering — brak rozmycia przy skalowaniu */
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  ruffle-player canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+</style>
+</head>
+<body>
+
+<script src="ruffle/ruffle.js"></script>
+<script>
+  window.RufflePlayer = window.RufflePlayer || {};
+  window.RufflePlayer.config = {
+    quality: "low",        // pixel-art rendering w Ruffle
+    letterbox: "on",
+    allowScriptAccess: "always",
+  };
+
+  window.addEventListener("load", () => {
+    const ruffle = window.RufflePlayer.newest();
+    const player = ruffle.createPlayer();
+    player.style.width  = "100vw";
+    player.style.height = "100vh";
+    document.body.appendChild(player);
+    player.load("SMF.swf");
+
+    // WASD -> strzalki: wysylamy dodatkowe zdarzenia arrow key do window
+    // Ruffle slucha na window, wiec to wystarczy
+    const WASD_MAP = {
+      KeyW: { key: "ArrowUp",    code: "ArrowUp",    keyCode: 38 },
+      KeyA: { key: "ArrowLeft",  code: "ArrowLeft",  keyCode: 37 },
+      KeyS: { key: "ArrowDown",  code: "ArrowDown",  keyCode: 40 },
+      KeyD: { key: "ArrowRight", code: "ArrowRight", keyCode: 39 },
+    };
+
+    function remap(e, type) {
+      const mapped = WASD_MAP[e.code];
+      if (!mapped) return;
+      window.dispatchEvent(new KeyboardEvent(type, {
+        key:        mapped.key,
+        code:       mapped.code,
+        keyCode:    mapped.keyCode,
+        which:      mapped.keyCode,
+        bubbles:    true,
+        cancelable: true,
+      }));
+    }
+
+    window.addEventListener("keydown", e => remap(e, "keydown"));
+    window.addEventListener("keyup",   e => remap(e, "keyup"));
+  });
+</script>
+
+</body>
+</html>
