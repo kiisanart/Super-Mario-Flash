@@ -13,11 +13,19 @@
 <body>
 
 <script>
-  // Wymuszamy nearest-neighbor na wszystkich Canvas2D kontekstach
-  Object.defineProperty(CanvasRenderingContext2D.prototype, "imageSmoothingEnabled", {
-    get: () => false,
-    set: () => {},
-  });
+  // Patch imageSmoothingEnabled na obu typach kontekstu (normalny + offscreen)
+  function patchSmoothing(proto) {
+    if (!proto) return;
+    Object.defineProperty(proto, "imageSmoothingEnabled", {
+      get: () => false,
+      set: () => {},
+      configurable: true,
+    });
+  }
+  patchSmoothing(CanvasRenderingContext2D.prototype);
+  if (typeof OffscreenCanvasRenderingContext2D !== "undefined") {
+    patchSmoothing(OffscreenCanvasRenderingContext2D.prototype);
+  }
 </script>
 <script src="ruffle/ruffle.js"></script>
 <script>
