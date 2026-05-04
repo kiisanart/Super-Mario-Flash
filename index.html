@@ -6,82 +6,73 @@
 <title>Super Mario Flash</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: #000;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-  }
-  ruffle-player {
-    display: block;
-    width: 100vw;
-    height: 100vh;
+  body { background: #000; width: 100vw; height: 100vh; overflow: hidden; }
+  canvas#out {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
   }
 </style>
 </head>
 <body>
 
-<script>
-  // Patch WebGL PRZED zaladowaniem Ruffle — zastepuje LINEAR na NEAREST dla wszystkich tekstur.
-  // Ruffle renderuje przez WebGL i domyslnie uzywa bilinear filtering na sprite'ach.
-  // Patch musi byc przed ruffle.js zeby zlapal stworzenie kontekstu WebGL.
-  (function() {
-    const _getContext = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function(type, opts) {
-      const ctx = _getContext.call(this, type, opts);
-      if (!ctx) return ctx;
-      if (type === "webgl" || type === "webgl2") {
-        const LINEAR              = ctx.LINEAR;
-        const NEAREST             = ctx.NEAREST;
-        const NEAREST_MIPMAP_NEAREST = ctx.NEAREST_MIPMAP_NEAREST;
-        const _texParam = ctx.texParameteri.bind(ctx);
-        ctx.texParameteri = function(target, pname, param) {
-          if (param === LINEAR)                    param = NEAREST;
-          if (param === ctx.LINEAR_MIPMAP_LINEAR)  param = NEAREST_MIPMAP_NEAREST;
-          if (param === ctx.LINEAR_MIPMAP_NEAREST) param = NEAREST_MIPMAP_NEAREST;
-          _texParam(target, pname, param);
-        };
-      }
-      return ctx;
-    };
-  })();
-</script>
+<canvas id="out"></canvas>
 
 <script src="ruffle/ruffle.js"></script>
 <script>
   window.RufflePlayer = window.RufflePlayer || {};
-  window.RufflePlayer.config = {
-    quality: "low",
-    letterbox: "on",
-    allowScriptAccess: "always",
-  };
+  window.RufflePlayer.config = { allowScriptAccess: "always" };
 
   window.addEventListener("load", () => {
     const ruffle = window.RufflePlayer.newest();
     const player = ruffle.createPlayer();
-    player.style.width  = "100vw";
-    player.style.height = "100vh";
+
+    // Ruffle poza ekranem, maly — renderuje w natywnej rozdzielczosci
+    player.style.cssText = "position:fixed;left:-9999px;top:0;width:550px;height:400px;";
     document.body.appendChild(player);
     player.load("SMF.swf");
 
-    // WASD -> strzalki
-    const WASD_MAP = {
-      KeyW: { key: "ArrowUp",    code: "ArrowUp",    keyCode: 38 },
-      KeyA: { key: "ArrowLeft",  code: "ArrowLeft",  keyCode: 37 },
-      KeyS: { key: "ArrowDown",  code: "ArrowDown",  keyCode: 40 },
-      KeyD: { key: "ArrowRight", code: "ArrowRight", keyCode: 39 },
-    };
+    // Nasz canvas fullscreen z nearest-neighbor
+    const out = document.getElementById("out");
+    const ctx = out.getContext("2d");
 
+    function startLoop(src) {
+      (function draw() {
+        out.width  = window.innerWidth;
+        out.height = window.innerHeight;
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(src, 0, 0, out.width, out.height);
+        requestAnimationFrame(draw);
+      })();
+    }
+
+    // Czekamy az Ruffle stworzy canvas w shadow DOM
+    const interval = setInterval(() => {
+      const src = player.shadowRoot?.querySelector("canvas");
+      if (src && src.width > 0) {
+        clearInterval(interval);
+        startLoop(src);
+      }
+    }, 200);
+
+    // WASD -> strzalki
+    const WASD = {
+      KeyW: { key: "ArrowUp",    keyCode: 38 },
+      KeyA: { key: "ArrowLeft",  keyCode: 37 },
+      KeyS: { key: "ArrowDown",  keyCode: 40 },
+      KeyD: { key: "ArrowRight", keyCode: 39 },
+    };
     function remap(e, type) {
-      const mapped = WASD_MAP[e.code];
-      if (!mapped) return;
+      const m = WASD[e.code];
+      if (!m) return;
       window.dispatchEvent(new KeyboardEvent(type, {
-        key: mapped.key, code: mapped.code,
-        keyCode: mapped.keyCode, which: mapped.keyCode,
+        key: m.key, code: m.key, keyCode: m.keyCode, which: m.keyCode,
         bubbles: true, cancelable: true,
       }));
     }
-
     window.addEventListener("keydown", e => remap(e, "keydown"));
     window.addEventListener("keyup",   e => remap(e, "keyup"));
   });
