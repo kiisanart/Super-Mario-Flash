@@ -21,6 +21,17 @@
 
 <canvas id="out"></canvas>
 
+<script>
+  // Wymuszamy preserveDrawingBuffer=true zanim Ruffle stworzy kontekst WebGL
+  // Bez tego canvas jest czyszczony po kazdej klatce i drawImage dostaje pusty obraz
+  const _getCtx = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function(type, opts) {
+    if (type === "webgl" || type === "webgl2") {
+      opts = Object.assign({}, opts, { preserveDrawingBuffer: true });
+    }
+    return _getCtx.call(this, type, opts);
+  };
+</script>
 <script src="ruffle/ruffle.js"></script>
 <script>
   window.RufflePlayer = window.RufflePlayer || {};
