@@ -23,49 +23,14 @@
   window.addEventListener("load", () => {
     const ruffle = window.RufflePlayer.newest();
     const player = ruffle.createPlayer();
-
-    // Player maly — Ruffle tworzy canvas buffer w rozmiarze 550x400
-    // Shadow root istnieje dopiero po appendChild, wiec kolejnosc jest wazna
     player.style.position = "fixed";
     player.style.top      = "0";
     player.style.left     = "0";
-    player.style.width    = "550px";
-    player.style.height   = "400px";
-    document.body.appendChild(player); // <-- shadow root tworzy sie tutaj
-
-    const root = player.shadowRoot;
-    if (root) {
-      function applyPixelStyle(canvas) {
-        canvas.style.position        = "fixed";
-        canvas.style.top             = "0";
-        canvas.style.left            = "0";
-        canvas.style.width           = "100vw";
-        canvas.style.height          = "100vh";
-        canvas.style.imageRendering  = "pixelated";
-      }
-
-      const canvasObserver = new MutationObserver(() => {
-        const canvas = root.querySelector("canvas");
-        if (!canvas) return;
-        canvasObserver.disconnect();
-
-        applyPixelStyle(canvas);
-
-        // Re-aplikuj jesli Ruffle zresetuje styl
-        const styleObserver = new MutationObserver(() => {
-          if (canvas.style.position !== "fixed") {
-            applyPixelStyle(canvas);
-          }
-        });
-        styleObserver.observe(canvas, { attributes: true, attributeFilter: ["style"] });
-      });
-
-      canvasObserver.observe(root, { childList: true, subtree: true });
-    }
-
+    player.style.width    = "100vw";
+    player.style.height   = "100vh";
+    document.body.appendChild(player);
     player.load("SMF.swf");
 
-    // WASD + E -> strzalki + spacja
     const WASD = {
       KeyW: { key: "ArrowUp",    keyCode: 38 },
       KeyA: { key: "ArrowLeft",  keyCode: 37 },
