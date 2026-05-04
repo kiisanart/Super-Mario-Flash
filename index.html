@@ -15,7 +15,11 @@
 <script src="ruffle/ruffle.js"></script>
 <script>
   window.RufflePlayer = window.RufflePlayer || {};
-  window.RufflePlayer.config = { allowScriptAccess: "always" };
+  window.RufflePlayer.config = {
+    allowScriptAccess: "always",
+    renderBackend: "canvas",
+    quality: "low",
+  };
 
   window.addEventListener("load", () => {
     const ruffle = window.RufflePlayer.newest();
@@ -23,6 +27,17 @@
     player.style.width  = "100vw";
     player.style.height = "100vh";
     document.body.appendChild(player);
+
+    // Z canvas2D renderer image-rendering: pixelated dociera przez shadow DOM
+    setTimeout(() => {
+      const root = player.shadowRoot;
+      if (root) {
+        const s = document.createElement("style");
+        s.textContent = "canvas { image-rendering: pixelated !important; }";
+        root.appendChild(s);
+      }
+    }, 500);
+
     player.load("SMF.swf");
 
     const WASD = {
