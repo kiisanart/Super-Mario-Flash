@@ -37,6 +37,7 @@
 <script>
   window.RufflePlayer = window.RufflePlayer || {};
   window.RufflePlayer.config = {
+    quality: "low",
     letterbox: "on",
     allowScriptAccess: "always",
   };
@@ -47,20 +48,20 @@
     player.style.width  = "100vw";
     player.style.height = "100vh";
     document.body.appendChild(player);
-    player.load("SMF.swf");
 
-    // Canvas jest w Shadow DOM — CSS z zewnatrz tam nie dociera.
-    // Czekamy az Ruffle stworzy canvas i ustawiamy pixelated bezposrednio.
-    const observer = new MutationObserver(() => {
-      const canvas = player.shadowRoot?.querySelector("canvas");
-      if (canvas) {
-        canvas.style.imageRendering = "pixelated";
-        observer.disconnect();
-      }
-    });
-    if (player.shadowRoot) {
-      observer.observe(player.shadowRoot, { childList: true, subtree: true });
+    // Wstrzykujemy styl do shadow root — jedyny sposob zeby dotrzec do canvasa w Ruffle
+    function injectPixelStyle() {
+      const root = player.shadowRoot;
+      if (!root) return;
+      const style = document.createElement("style");
+      style.textContent = "canvas { image-rendering: pixelated !important; }";
+      root.appendChild(style);
     }
+    // Probujemy od razu, potem po krotkim czasie (na wypadek poznego init)
+    injectPixelStyle();
+    setTimeout(injectPixelStyle, 500);
+
+    player.load("SMF.swf");
 
     // WASD -> strzalki: wysylamy dodatkowe zdarzenia arrow key do window
     // Ruffle slucha na window, wiec to wystarczy
