@@ -7,31 +7,11 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #000; width: 100vw; height: 100vh; overflow: hidden; }
-  canvas#out {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-  }
+  ruffle-player { display: block; width: 100vw; height: 100vh; }
 </style>
 </head>
 <body>
 
-<canvas id="out"></canvas>
-
-<script>
-  // Wymuszamy preserveDrawingBuffer=true zanim Ruffle stworzy kontekst WebGL
-  // Bez tego canvas jest czyszczony po kazdej klatce i drawImage dostaje pusty obraz
-  const _getCtx = HTMLCanvasElement.prototype.getContext;
-  HTMLCanvasElement.prototype.getContext = function(type, opts) {
-    if (type === "webgl" || type === "webgl2") {
-      opts = Object.assign({}, opts, { preserveDrawingBuffer: true });
-    }
-    return _getCtx.call(this, type, opts);
-  };
-</script>
 <script src="ruffle/ruffle.js"></script>
 <script>
   window.RufflePlayer = window.RufflePlayer || {};
@@ -40,34 +20,10 @@
   window.addEventListener("load", () => {
     const ruffle = window.RufflePlayer.newest();
     const player = ruffle.createPlayer();
-
-    // Ruffle poza ekranem, maly — renderuje w natywnej rozdzielczosci
-    player.style.cssText = "position:fixed;left:-9999px;top:0;width:550px;height:400px;";
+    player.style.width  = "100vw";
+    player.style.height = "100vh";
     document.body.appendChild(player);
     player.load("SMF.swf");
-
-    // Nasz canvas fullscreen z nearest-neighbor
-    const out = document.getElementById("out");
-    const ctx = out.getContext("2d");
-
-    function startLoop(src) {
-      (function draw() {
-        out.width  = window.innerWidth;
-        out.height = window.innerHeight;
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(src, 0, 0, out.width, out.height);
-        requestAnimationFrame(draw);
-      })();
-    }
-
-    // Czekamy az Ruffle stworzy canvas w shadow DOM
-    const interval = setInterval(() => {
-      const src = player.shadowRoot?.querySelector("canvas");
-      if (src && src.width > 0) {
-        clearInterval(interval);
-        startLoop(src);
-      }
-    }, 200);
 
     // WASD -> strzalki
     const WASD = {
