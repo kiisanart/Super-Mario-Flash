@@ -6,32 +6,46 @@
 <title>Super Mario Flash</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   body {
     background: #000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
     width: 100vw;
     height: 100vh;
     overflow: hidden;
   }
-
   ruffle-player {
+    display: block;
     width: 100vw;
     height: 100vh;
-    /* pixel-art rendering — brak rozmycia przy skalowaniu */
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-  }
-
-  ruffle-player canvas {
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
   }
 </style>
 </head>
 <body>
+
+<script>
+  // Patch WebGL PRZED zaladowaniem Ruffle — zastepuje LINEAR na NEAREST dla wszystkich tekstur.
+  // Ruffle renderuje przez WebGL i domyslnie uzywa bilinear filtering na sprite'ach.
+  // Patch musi byc przed ruffle.js zeby zlapal stworzenie kontekstu WebGL.
+  (function() {
+    const _getContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function(type, opts) {
+      const ctx = _getContext.call(this, type, opts);
+      if (!ctx) return ctx;
+      if (type === "webgl" || type === "webgl2") {
+        const LINEAR              = ctx.LINEAR;
+        const NEAREST             = ctx.NEAREST;
+        const NEAREST_MIPMAP_NEAREST = ctx.NEAREST_MIPMAP_NEAREST;
+        const _texParam = ctx.texParameteri.bind(ctx);
+        ctx.texParameteri = function(target, pname, param) {
+          if (param === LINEAR)                    param = NEAREST;
+          if (param === ctx.LINEAR_MIPMAP_LINEAR)  param = NEAREST_MIPMAP_NEAREST;
+          if (param === ctx.LINEAR_MIPMAP_NEAREST) param = NEAREST_MIPMAP_NEAREST;
+          _texParam(target, pname, param);
+        };
+      }
+      return ctx;
+    };
+  })();
+</script>
 
 <script src="ruffle/ruffle.js"></script>
 <script>
@@ -48,23 +62,9 @@
     player.style.width  = "100vw";
     player.style.height = "100vh";
     document.body.appendChild(player);
-
-    // Wstrzykujemy styl do shadow root — jedyny sposob zeby dotrzec do canvasa w Ruffle
-    function injectPixelStyle() {
-      const root = player.shadowRoot;
-      if (!root) return;
-      const style = document.createElement("style");
-      style.textContent = "canvas { image-rendering: pixelated !important; }";
-      root.appendChild(style);
-    }
-    // Probujemy od razu, potem po krotkim czasie (na wypadek poznego init)
-    injectPixelStyle();
-    setTimeout(injectPixelStyle, 500);
-
     player.load("SMF.swf");
 
-    // WASD -> strzalki: wysylamy dodatkowe zdarzenia arrow key do window
-    // Ruffle slucha na window, wiec to wystarczy
+    // WASD -> strzalki
     const WASD_MAP = {
       KeyW: { key: "ArrowUp",    code: "ArrowUp",    keyCode: 38 },
       KeyA: { key: "ArrowLeft",  code: "ArrowLeft",  keyCode: 37 },
@@ -76,12 +76,9 @@
       const mapped = WASD_MAP[e.code];
       if (!mapped) return;
       window.dispatchEvent(new KeyboardEvent(type, {
-        key:        mapped.key,
-        code:       mapped.code,
-        keyCode:    mapped.keyCode,
-        which:      mapped.keyCode,
-        bubbles:    true,
-        cancelable: true,
+        key: mapped.key, code: mapped.code,
+        keyCode: mapped.keyCode, which: mapped.keyCode,
+        bubbles: true, cancelable: true,
       }));
     }
 
