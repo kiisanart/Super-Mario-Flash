@@ -12,6 +12,13 @@
 </head>
 <body>
 
+<script>
+  // Wymuszamy nearest-neighbor na wszystkich Canvas2D kontekstach
+  Object.defineProperty(CanvasRenderingContext2D.prototype, "imageSmoothingEnabled", {
+    get: () => false,
+    set: () => {},
+  });
+</script>
 <script src="ruffle/ruffle.js"></script>
 <script>
   window.RufflePlayer = window.RufflePlayer || {};
