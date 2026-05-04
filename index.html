@@ -37,7 +37,6 @@
 <script>
   window.RufflePlayer = window.RufflePlayer || {};
   window.RufflePlayer.config = {
-    quality: "low",        // pixel-art rendering w Ruffle
     letterbox: "on",
     allowScriptAccess: "always",
   };
@@ -49,6 +48,19 @@
     player.style.height = "100vh";
     document.body.appendChild(player);
     player.load("SMF.swf");
+
+    // Canvas jest w Shadow DOM — CSS z zewnatrz tam nie dociera.
+    // Czekamy az Ruffle stworzy canvas i ustawiamy pixelated bezposrednio.
+    const observer = new MutationObserver(() => {
+      const canvas = player.shadowRoot?.querySelector("canvas");
+      if (canvas) {
+        canvas.style.imageRendering = "pixelated";
+        observer.disconnect();
+      }
+    });
+    if (player.shadowRoot) {
+      observer.observe(player.shadowRoot, { childList: true, subtree: true });
+    }
 
     // WASD -> strzalki: wysylamy dodatkowe zdarzenia arrow key do window
     // Ruffle slucha na window, wiec to wystarczy
